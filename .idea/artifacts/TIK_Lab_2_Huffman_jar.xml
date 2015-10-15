@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="TIK_Lab_2_Huffman:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/TIK_Lab_2_Huffman_jar</output-path>
+    <root id="archive" name="TIK_Lab_2_Huffman.jar">
+      <element id="module-output" name="TIK_Lab_2_Huffman" />
+    </root>
+  </artifact>
+</component>
