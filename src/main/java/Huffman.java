@@ -17,7 +17,7 @@ public class Huffman {
 
     public Huffman(){}
 
-    public void compress(String inputFilePath, String outFileName) throws IOException{
+    public boolean compress(String inputFilePath, String outFileName) throws IOException{
         fileIn = inputFilePath;
         fileOut = outFileName;
 
@@ -37,6 +37,7 @@ public class Huffman {
         huffman.saveCodes();
         huffman.statistics();
         huffman.printTree(root);
+        return true;
     }
 
     private void getData() throws IOException{
@@ -73,6 +74,8 @@ public class Huffman {
         while(!in.isEmpty()){
             c = in.readChar();
             String code = newCode[c];
+            if (code.length() == 0)
+                out.write(false);
             for (int j = 0; j < code.length(); j++)
                 if (code.charAt(j) == '0')
                     out.write(false);
@@ -250,12 +253,12 @@ public class Huffman {
     }
 
 
-    public void uncompress(String inputFilePath, String outputFileName) throws IOException{
+    public boolean uncompress(String inputFilePath, String outputFileName) throws IOException{
         fileIn = inputFilePath;
         fileOut = outputFileName;
 
         final long startRecover = System.currentTimeMillis();
-        System.out.println("\n\n\n\n\n\n Recovery...");
+        System.out.println("\n Recovery...");
 
         BinaryIn in = new BinaryIn(fileIn);
         BinaryOut out = new BinaryOut(fileOut);
@@ -282,6 +285,7 @@ public class Huffman {
         }
         out.close();
         System.out.println("\nRecovery finished at " + (float) (System.currentTimeMillis() - startRecover) / 1000 + "s");
+        return true;
     }
 
     private Node readTree(BinaryIn in){
@@ -336,9 +340,13 @@ public class Huffman {
                     default:
                         System.out.println("something wrong...");
                 }
-            } catch (Exception e){
-                    System.out.println("wrong path...");
-                }
+            } catch (NullPointerException e){
+                if (dataSize == 0)
+                 System.out.println("File is empty. Nothing to compress");
+            }
+            catch (Exception e){
+                    System.out.println(e.toString());
+            }
         } while (!exit);
 
     }
