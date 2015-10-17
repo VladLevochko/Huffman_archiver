@@ -1,4 +1,6 @@
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -51,16 +53,17 @@ public class GUI{
                 statusLabelCmp.setText("Please wait. File in processing...");
                 try {
 
-                    boolean status = hf.compress(inputFile, outputFile);
-                    if (status)
-                        statusLabelCmp.setText("File is compressed!");
-                    inputFile = null;
-                    outputFile = null;
-                    inputFileLabelCmp.setText("");
-                    outputFileLabelCmp.setText("");
+                    ResultObject res = hf.compress(inputFile, outputFile);
+                    Result result = new Result();
+                    result.showDialog(res);
+                    resetFiles();
                 } catch (IOException e1) {
                     e1.printStackTrace();
+                } catch (NullPointerException e1){
+                    statusLabelCmp.setText("File is empty!");
+                    resetFiles();
                 }
+                statusLabelCmp.setText("File compressed");
 
             }
 
@@ -78,16 +81,14 @@ public class GUI{
                 System.out.println(inputFile + " " + outputFile);
                 statusLabelUncmp.setText("Please wait. File in processing...");
                 try {
-                    boolean status = hf.uncompress(inputFile, outputFile);
-                    if (status)
-                        statusLabelUncmp.setText("File is uncompressed!");
-                    inputFile = null;
-                    outputFile = null;
-                    inputFileLabelUncmp.setText("");
-                    outputFileLabelUncmp.setText("");
+                     ResultObject res = hf.uncompress(inputFile, outputFile);
+                    Result result = new Result();
+                    result.showDialog(res);
+                    resetFiles();
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
+                statusLabelUncmp.setText("File uncompressed");
             }
 
         });
@@ -112,6 +113,11 @@ public class GUI{
             }
 
             fileChooser = new JFileChooser();
+
+            if (e.getSource() == chooseFileButtonUncmp){
+                FileFilter ff = new FileNameExtensionFilter("Compressed files", "cmp");
+                fileChooser.setFileFilter(ff);
+            }
             int returnedValue = fileChooser.showOpenDialog(rootPanel);
             if (returnedValue == JFileChooser.APPROVE_OPTION){
                 File selectedFile = fileChooser.getSelectedFile();
@@ -134,10 +140,18 @@ public class GUI{
 
             } else {
                 labelSelected.setText("Nothing selected...");
-                inputFile = null;
-                outputFile = null;
+                resetFiles();
             }
         }
+    }
+
+    public void resetFiles(){
+        inputFile = null;
+        outputFile = null;
+        inputFileLabelCmp.setText("");
+        inputFileLabelUncmp.setText("");
+        outputFileLabelCmp.setText("");
+        outputFileLabelUncmp.setText("");
     }
 
     public static void main(String[] args) {

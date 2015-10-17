@@ -1,52 +1,51 @@
 import java.io.*;
 import java.util.*;
 
-/**
- * /home/vlad/Downloads/wps-office_9.1.0.4975-a19p1_amd64.deb
- */
-
 public class Huffman {
     private static String fileIn = "";
     private static String fileOut = "";
     final private static int SIZE = 256;
     static private int[] symbolsFreq = new int[SIZE];
-    static private float[] chance = new float[SIZE];
+    static private double[] chance = new double[SIZE];
     static private String[] newCode = new String[SIZE];
     static private char[] oldCode = new char[SIZE];
     static private int dataSize;
 
     public Huffman(){}
 
-    public boolean compress(String inputFilePath, String outFileName) throws IOException{
+    public ResultObject compress(String inputFilePath, String outFileName) throws IOException{
         fileIn = inputFilePath;
         fileOut = outFileName;
 
         final long timeStart = System.currentTimeMillis();
 
-        Huffman huffman = new Huffman();
         Node root;
+        getData(fileIn);
 
-        huffman.getData();
+        double inputFileEntropy = getEntropy();
 
-        root = huffman.buildTree();
-        huffman.buildCode(root, "");
+        root = buildTree();
+        buildCode(root, "");
 
-        huffman.writeData(root);
+        double bitPerSymbol = writeData(root);
 
-        System.out.println("\n\tExecution time: " + (float) (System.currentTimeMillis() - timeStart) / 1000 + "s");
-        huffman.saveCodes();
-        huffman.statistics();
-        huffman.printTree(root);
-        return true;
+        getData(fileOut);
+        double outputFileEntropy = getEntropy();
+
+        additionalInformation(true, true, root);
+
+        double executionTime = (System.currentTimeMillis() - timeStart) / 1000;
+
+        return new ResultObject(inputFileEntropy, outputFileEntropy, bitPerSymbol, executionTime);
     }
 
-    private void getData() throws IOException{
+    private void getData(String file) throws IOException{
         System.out.print("Reading data...");
 
         for (int i = 0; i < SIZE; i++)
             symbolsFreq[i] = 0;
         dataSize = 0;
-        BinaryIn in = new BinaryIn(fileIn);
+        BinaryIn in = new BinaryIn(file);
         char c;
         while (!in.isEmpty()){
             c = in.readChar();
@@ -54,26 +53,31 @@ public class Huffman {
             symbolsFreq[(int) c]++;
         }
 
-        for (int i = 0; i < SIZE; i++)
-            chance[i] = (float)symbolsFreq[i] / dataSize;
+        /*for (int i = 0; i < SIZE; i++)
+            chance[i] = (float)symbolsFreq[i] / dataSize;*/
         System.out.println("\t\tDone!");
     }
 
-    private void writeData(Node root) throws IOException{
+    private double writeData(Node root) throws IOException{
         BinaryOut out = new BinaryOut(fileOut);
         writeTree(root, out);
         out.write(dataSize);
-        rewriteData(out);
+        double bitPerSybmol = rewriteData(out);
         out.close();
+        return bitPerSybmol;
     }
 
-    private void rewriteData(BinaryOut out) throws IOException{
+    private double rewriteData(BinaryOut out) throws IOException{
         System.out.print("Writing data...");
         BinaryIn in = new BinaryIn(fileIn);
         char c;
+        int n = 0;
+        long length = 0;
         while(!in.isEmpty()){
             c = in.readChar();
             String code = newCode[c];
+            length += code.length();
+            n++;
             if (code.length() == 0)
                 out.write(false);
             for (int j = 0; j < code.length(); j++)
@@ -83,6 +87,7 @@ public class Huffman {
                     out.write(true);
         }
         System.out.println("\t\tDone!");
+        return (length / n);
     }
 
     private Node buildTree(){
@@ -147,13 +152,85 @@ public class Huffman {
         if (node.isLeaf()) newCode[node.ch] = s;
     }
 
-    private void saveCodes(){
+    public ResultObject uncompress(String inputFilePath, String outputFileName) throws IOException{
+        fileIn = inputFilePath;
+        fileOut = outputFileName;
+
+        final long startRecover = System.currentTimeMillis();
+        System.out.println("\n Recovery...");
+
+        BinaryIn in = new BinaryIn(fileIn);
+        BinaryOut out = new BinaryOut(fileOut);
+
+        getData(fileIn);
+        double inputFileEntropy = getEntropy();
+
+        Node recoveryTree = readTree(in);
+        additionalInformation(false, true, recoveryTree);
+
+        Node cur = recoveryTree;
+
+        int bytes = in.readInt();
+
+        while(bytes > 0){
+            boolean b = in.readBoolean();
+            if (!b && cur.left != null)
+                cur = cur.left;
+            else
+                if (cur.right != null) cur = cur.right;
+            if(cur.isLeaf()) {
+                out.write(cur.ch);
+                bytes--;
+                cur = recoveryTree;
+            }
+
+        }
+        out.close();
+
+        getData(fileOut);
+        double outputFileEntropy = getEntropy();
+
+        double time = (System.currentTimeMillis() - startRecover) / 1000;
+        return new ResultObject(inputFileEntropy, outputFileEntropy, 8, time);
+    }
+
+    private Node readTree(BinaryIn in){
+        boolean bit = in.readBoolean();
+        if (bit)
+            return new Node(-1, readTree(in), readTree(in));
+            return new Node(in.readChar(), -1);
+    }
+
+    private double getEntropy() throws IOException{
+        double entropy = 0;
+        for (int i = 0; i < SIZE; i++) {
+            chance[i] = (double) symbolsFreq[i] / dataSize;
+            if (chance[i] != 0)
+                entropy += chance[i] * (Math.log(chance[i]) / Math.log(2));
+        }
+        return -entropy;
+    }
+
+    private void additionalInformation(boolean saveCodes, boolean saveTree, Node root){
+        File in = new File(fileIn);
+        String log = in.getPath() + "LOG.txt";
+        try(PrintWriter out = new PrintWriter(new File(log))){
+            if (saveCodes)
+                saveCodes(out);
+            if (saveTree)
+                printTree(root, out);
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    private void saveCodes(PrintWriter out){
         for (int i = 0; i < SIZE; i++)
             oldCode[i] = (char) i;
         for (int i = 0; i < SIZE; i++)
             for (int j = i + 1; j < SIZE; j++)
                 if (chance[i] > chance[j]){
-                    float x = chance[i];
+                    double x = chance[i];
                     chance[i] = chance[j];
                     chance[j] = x;
                     String y = newCode[i];
@@ -164,32 +241,13 @@ public class Huffman {
                     oldCode[j] = z;
                 }
 
-        try(PrintWriter out = new PrintWriter(new File("codes.txt"))){
-            for (int i = 0; i < SIZE; i++)
-                if (newCode[i] != null)
-                    out.println(oldCode[i] + "\t" + newCode[i] + "\t" + chance[i]);
-        } catch (Exception e){
-            e.printStackTrace();
-        }
+        for (int i = 0; i < SIZE; i++)
+            if (newCode[i] != null)
+                out.println(oldCode[i] + "\t" + newCode[i] + "\t" + chance[i]);
     }
 
-    private void statistics() throws IOException{
-        System.out.println("\nStatistics:");
-        System.out.println("Size of uncompressed file: " + dataSize + "byte");
-        getData();
-        float entropy = 0;
-        for (int i = 0; i < SIZE; i++) {
-            chance[i] = (float) symbolsFreq[i] / dataSize;
-            if (chance[i] != 0)
-                entropy += chance[i] * (Math.log(chance[i]) / Math.log(2));
-        }
-
-        System.out.println("\tEntropy: " + (-1) * entropy + "\n" +
-                           "\tAmount of information: " + entropy * (-1) * dataSize);
-    }
-
-    public void printTree(Node root){
-        System.out.println("Tree:");
+    public void printTree(Node root, PrintWriter out){
+        out.println("Tree:");
         int depth = depth(root, 1);
         List<List<Character>> tree = new ArrayList<>();
         for (int i = 0; i < depth; i++)
@@ -198,15 +256,15 @@ public class Huffman {
 
         for (int i = 0; i < depth; i++){
             for (int j = 0; j < Math.pow(2, depth - i - 1) - 1; j++)
-                System.out.print(" ");
+                out.print(" ");
             int k = 0;
             while(k < tree.get(i).size()){
-                System.out.print(tree.get(i).get(k));
+                out.print(tree.get(i).get(k));
                 for (int x = 0; x < Math.pow(2, depth - i) - 1; x++)
-                    System.out.print(" ");
+                    out.print(" ");
                 k++;
             }
-            System.out.println();
+            out.println();
         }
     }
 
@@ -253,47 +311,23 @@ public class Huffman {
     }
 
 
-    public boolean uncompress(String inputFilePath, String outputFileName) throws IOException{
-        fileIn = inputFilePath;
-        fileOut = outputFileName;
 
-        final long startRecover = System.currentTimeMillis();
-        System.out.println("\n Recovery...");
 
-        BinaryIn in = new BinaryIn(fileIn);
-        BinaryOut out = new BinaryOut(fileOut);
 
-        Node recoveryTree = readTree(in);
-        printTree(recoveryTree);
 
-        Node cur = recoveryTree;
 
-        int bytes = in.readInt();
 
-        while(bytes > 0){
-            boolean b = in.readBoolean();
-            if (!b && cur.left != null)
-                cur = cur.left;
-            else
-                if (cur.right != null) cur = cur.right;
-            if(cur.isLeaf()) {
-                out.write(cur.ch);
-                bytes--;
-                cur = recoveryTree;
-            }
 
-        }
-        out.close();
-        System.out.println("\nRecovery finished at " + (float) (System.currentTimeMillis() - startRecover) / 1000 + "s");
-        return true;
-    }
 
-    private Node readTree(BinaryIn in){
-        boolean bit = in.readBoolean();
-        if (bit)
-            return new Node(-1, readTree(in), readTree(in));
-            return new Node(in.readChar(), -1);
-    }
+
+
+
+
+
+
+
+
+
 
 
     public static void main(String args[]){
