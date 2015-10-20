@@ -21,29 +21,25 @@ public class Huffman {
 
         Node root;
         getData(fileIn);
-
         double inputFileEntropy = getEntropy();
-
         root = buildTree();
         buildCode(root, "");
-
         double bitPerSymbol = writeData(root);
-
+        additionalInformation(true, true, root);
         getData(fileOut);
         double outputFileEntropy = getEntropy();
-
-        additionalInformation(true, true, root);
-
         double executionTime = (System.currentTimeMillis() - timeStart) / 1000;
 
         return new ResultObject(inputFileEntropy, outputFileEntropy, bitPerSymbol, executionTime);
     }
 
     private void getData(String file) throws IOException{
-        System.out.print("Reading data...");
-
-        for (int i = 0; i < SIZE; i++)
+        for (int i = 0; i < SIZE; i++) {
             symbolsFreq[i] = 0;
+            chance[i] = 0;
+            newCode[i] = null;
+            oldCode[i] = 0;
+        }
         dataSize = 0;
         BinaryIn in = new BinaryIn(file);
         char c;
@@ -55,7 +51,6 @@ public class Huffman {
 
         /*for (int i = 0; i < SIZE; i++)
             chance[i] = (float)symbolsFreq[i] / dataSize;*/
-        System.out.println("\t\tDone!");
     }
 
     private double writeData(Node root) throws IOException{
@@ -68,7 +63,6 @@ public class Huffman {
     }
 
     private double rewriteData(BinaryOut out) throws IOException{
-        System.out.print("Writing data...");
         BinaryIn in = new BinaryIn(fileIn);
         char c;
         int n = 0;
@@ -86,13 +80,10 @@ public class Huffman {
                 else
                     out.write(true);
         }
-        System.out.println("\t\tDone!");
         return (length / n);
     }
 
     private Node buildTree(){
-        System.out.print("Building tree...");
-
         LinkedList<Node> nodes = new LinkedList<>();
 
         for (int i = 0; i < symbolsFreq.length; i++)
@@ -106,7 +97,6 @@ public class Huffman {
 
             addIn(nodes, new Node(l.freq + r.freq, l, r));
         }
-        System.out.println("\tDone!");
         return nodes.poll();
     }
 
@@ -124,11 +114,7 @@ public class Huffman {
         }
 
     private void writeTree(Node root, BinaryOut out){
-        System.out.print("Writing tree...");
-
         writeNodes(root, out);
-
-        System.out.println("\t\tDone!");
     }
 
     private void writeNodes(Node x, BinaryOut out){
@@ -157,7 +143,6 @@ public class Huffman {
         fileOut = outputFileName;
 
         final long startRecover = System.currentTimeMillis();
-        System.out.println("\n Recovery...");
 
         BinaryIn in = new BinaryIn(fileIn);
         BinaryOut out = new BinaryOut(fileOut);
@@ -216,7 +201,7 @@ public class Huffman {
         String log = in.getPath() + "LOG.txt";
         try(PrintWriter out = new PrintWriter(new File(log))){
             if (saveCodes)
-                saveCodes(out);
+                printCodes(out);
             if (saveTree)
                 printTree(root, out);
         } catch (IOException e){
@@ -224,7 +209,8 @@ public class Huffman {
         }
     }
 
-    private void saveCodes(PrintWriter out){
+    private void printCodes(PrintWriter out){
+        out.println("Codes:");
         for (int i = 0; i < SIZE; i++)
             oldCode[i] = (char) i;
         for (int i = 0; i < SIZE; i++)
@@ -255,16 +241,22 @@ public class Huffman {
         nodes(root, tree, depth, 0);
 
         for (int i = 0; i < depth; i++){
-            for (int j = 0; j < Math.pow(2, depth - i - 1) - 1; j++)
+            for (int j = 0; j < Math.pow(2, depth - i - 1) - 1; j++) {
                 out.print(" ");
+                System.out.print(" ");
+            }
             int k = 0;
             while(k < tree.get(i).size()){
                 out.print(tree.get(i).get(k));
-                for (int x = 0; x < Math.pow(2, depth - i) - 1; x++)
+                System.out.print(tree.get(i).get(k));
+                for (int x = 0; x < Math.pow(2, depth - i) - 1; x++) {
                     out.print(" ");
+                    System.out.print(" ");
+                }
                 k++;
             }
             out.println();
+            System.out.println();
         }
     }
 
@@ -312,26 +304,8 @@ public class Huffman {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     public static void main(String args[]){
-
+/*
         Scanner in = new Scanner(System.in);
         System.out.println("Commands:\n");
         System.out.println("\tcompress path/to/file path/to/compressedFileName");
@@ -382,6 +356,12 @@ public class Huffman {
                     System.out.println(e.toString());
             }
         } while (!exit);
-
+*/
+        Huffman hf = new Huffman();
+        try {
+            hf.compress("/home/vlad/IdeaProjects/TIK_Lab_2_Huffman/text.txt", "/home/vlad/IdeaProjects/TIK_Lab_2_Huffman/text.txt.cmp");
+        } catch (IOException e){
+            e.printStackTrace();
+        }
     }
 }

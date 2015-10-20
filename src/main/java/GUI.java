@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class GUI{
+
     private JLabel logoLabel;
     private JLabel statusLabelCmp;
     private JLabel statusLabelUncmp;
@@ -36,6 +37,7 @@ public class GUI{
 
     private void createUIComponents() {
         // TODO: place custom component creation code here
+
         JFrame frame = new JFrame("GUI");
         frame.setContentPane(this.rootPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -50,7 +52,6 @@ public class GUI{
                 statusLabelCmp.setText("Select file!");
             else {
                 System.out.println(inputFile + " " + outputFile);
-                statusLabelCmp.setText("Please wait. File in processing...");
                 try {
 
                     ResultObject res = hf.compress(inputFile, outputFile);
@@ -79,7 +80,6 @@ public class GUI{
                 statusLabelUncmp.setText("Select file!");
             else {
                 System.out.println(inputFile + " " + outputFile);
-                statusLabelUncmp.setText("Please wait. File in processing...");
                 try {
                      ResultObject res = hf.uncompress(inputFile, outputFile);
                     Result result = new Result();
@@ -132,7 +132,7 @@ public class GUI{
 
                 else {
                     outName = selectedFile.getName().substring(0, selectedFile.getName().length() - 4);
-                    outputFile = selectedFile.getAbsolutePath() + outName;
+                    outputFile = selectedFile.getAbsolutePath().substring(0, selectedFile.getAbsolutePath().length() - 4);
                 }
 
                 labelSelected.setText(selectedFile.getName());
